@@ -15,8 +15,8 @@
 			<template v-for="tile in tiles">
 				<div class="tile" :key="tile.id"
 				     :class="[tile.status]"
-				     :x="tile.x" :y="tile.y" :tile="tile.tile">
-					{{tile.tile}}
+				     :x="tile.x" :y="tile.y" :tile="tile.num">
+					{{tile.num}}
 				</div>
 			</template>
 		</div>
@@ -38,14 +38,6 @@
     },
     mounted() {
       window.addEventListener( 'keydown', this.onKeyDown );
-      let cells = [];
-      for ( let x = 0; x < W; ++x ) {
-        cells.push( [] );
-        for ( let y = 0; y < H; ++y ) {
-          cells[ x ].push( 0 );
-        }
-      }
-      this.cells = cells;
 
       this.init();
     },
@@ -55,6 +47,14 @@
     methods: {
       // 初始化
       init() {
+        let cells = [];
+        for ( let x = 0; x < W; ++x ) {
+          cells.push( [] );
+          for ( let y = 0; y < H; ++y ) {
+            cells[ x ].push( 0 );
+          }
+        }
+        this.cells = cells;
         this.tiles = [];
         this.generateTile();
         this.generateTile();
@@ -66,13 +66,14 @@
       // 生成新的棋子
       generateTile() {
         const emptyCells = this.__getEmptyCells();
+        if ( !emptyCells.length ) return;
         let { x, y } = emptyCells[ Math.floor( Math.random() * emptyCells.length ) ];
 
         let tile = {
           id: ++this.lastTileId,
           x,
           y,
-          tile: 2,
+          num: 2,
         };
         this.tiles.push( tile );
         this.cells[ x ][ y ] = tile;
@@ -90,8 +91,8 @@
       addScore( num ) {
         this.$emit( 'addScore', num );
       },
-      unsolvable() {
-        this.$emit( 'unsolvable' );
+      gameOver() {
+        this.$emit( 'gameOver' );
       },
       // 监听滑动事件
       onTouchStart( e ) {
@@ -156,11 +157,144 @@
       },
       // 棋子移动
       __moveTiles( direction ) {
+        if ( this.animating ) return;
         console.log( '__moveTiles', direction )
-        // this.animating = true;
+        let lastSingleTile, nextX = 0, nextY = 0;
+        let canMove = false;
+        switch ( direction ) {
+          case 'up':
+            for ( let x = 0; x < W; ++x ) {
+              lastSingleTile = null;
+              nextY = 0;
+              for ( let y = nextY; y < H; ++y ) {
+                const tile = this.cells[ x ][ y ];
+                if ( !tile ) continue;
+                if ( lastSingleTile && lastSingleTile.num === tile.num ) {
+                  lastSingleTile.num *= 2;
+                  this.addScore( lastSingleTile.num );
+                  this.__removeTile( tile );
+                  lastSingleTile = null;
+                  canMove = true;
+                } else {
+                  if ( y > nextY ) {
+                    this.__moveTile( tile, x, nextY );
+                    canMove = true;
+                  }
+                  lastSingleTile = tile;
+                  ++nextY;
+                }
+              }
+            }
+            break;
+          case 'down':
+            for ( let x = 0; x < W; ++x ) {
+              lastSingleTile = null;
+              nextY = H - 1;
+              for ( let y = nextY; y >= 0; --y ) {
+                const tile = this.cells[ x ][ y ];
+                if ( !tile ) continue;
+                if ( lastSingleTile && lastSingleTile.num === tile.num ) {
+                  lastSingleTile.num *= 2;
+                  this.addScore( lastSingleTile.num );
+                  this.__removeTile( tile );
+                  lastSingleTile = null;
+                  canMove = true;
+                } else {
+                  if ( y < nextY ) {
+                    this.__moveTile( tile, x, nextY );
+                    canMove = true;
+                  }
+                  lastSingleTile = tile;
+                  --nextY;
+                }
+              }
+            }
+            break;
+          case 'left':
+            for ( let y = 0; y < H; ++y ) {
+              lastSingleTile = null;
+              nextX = 0;
+              for ( let x = nextX; x < W; ++x ) {
+                const tile = this.cells[ x ][ y ];
+                if ( !tile ) continue;
+                if ( lastSingleTile && lastSingleTile.num === tile.num ) {
+                  lastSingleTile.num *= 2;
+                  this.addScore( lastSingleTile.num );
+                  this.__removeTile( tile );
+                  lastSingleTile = null;
+                  canMove = true;
+                } else {
+                  if ( x > nextX ) {
+                    this.__moveTile( tile, nextX, y );
+                    canMove = true;
+                  }
+                  lastSingleTile = tile;
+                  ++nextX;
+                }
+              }
+            }
+            break;
+          case 'right':
+            for ( let y = 0; y < H; ++y ) {
+              lastSingleTile = null;
+              nextX = W - 1;
+              for ( let x = nextX; x >= 0; --x ) {
+                const tile = this.cells[ x ][ y ];
+                if ( !tile ) continue;
+                if ( lastSingleTile && lastSingleTile.num === tile.num ) {
+                  lastSingleTile.num *= 2;
+                  this.addScore( lastSingleTile.num );
+                  this.__removeTile( tile );
+                  lastSingleTile = null;
+                  canMove = true;
+                } else {
+                  if ( x < nextX ) {
+                    this.__moveTile( tile, nextX, y );
+                    canMove = true;
+                  }
+                  lastSingleTile = tile;
+                  --nextX;
+                }
+              }
+            }
+            break;
+        }
+
+        if ( canMove ) {
+          this.animating = true;
+
+          setTimeout( () => {
+            this.animating = false;
+            this.generateTile();
+            if ( this.__checkGameOver() ) {
+              setTimeout( () => {
+                this.gameOver();
+              }, 200 );
+            }
+          }, 200 );
+        }
+      },
+      __moveTile( tile, x, y ) {
+        console.log( '__moveTile', tile.x, tile.y, x, y );
+        this.cells[ tile.x ][ tile.y ] = 0;
+        this.cells[ x ][ y ] = tile;
+        tile.x = x;
+        tile.y = y;
+      },
+      __removeTile( tile ) {
+        this.cells[ tile.x ][ tile.y ] = 0;
+        this.tiles.splice( this.tiles.indexOf( tile ), 1 );
       },
       // 计算是否结束
       __checkGameOver() {
+        for ( let x = 0; x < W; ++x ) {
+          for ( let y = 0; y < H; ++y ) {
+            if ( !this.cells[ x ][ y ] ) return false;
+            if ( x > 0 && this.cells[ x - 1 ][ y ] && this.cells[ x - 1 ][ y ].num === this.cells[ x ][ y ].num ) return false;
+            if ( y > 0 && this.cells[ x ][ y - 1 ] && this.cells[ x ][ y - 1 ].num === this.cells[ x ][ y ].num ) return false;
+          }
+        }
+        return true;
       },
     },
   }
@@ -221,7 +355,7 @@
 				line-height: $H;
 				text-align: center;
 				border-radius: 6px;
-				transition: all 0.3s;
+				transition: left 0.2s, top 0.2s ease;
 
 				animation: tile-appear 0.2s ease 0.1s both;
 				@keyframes tile-appear {
@@ -262,22 +396,27 @@
 				}
 
 				&[tile="128"] {
-					font-size: 25px;
+					font-size: 50px;
 					background: #edcf72;
 				}
 
+				&[tile="256"] {
+					font-size: 50px;
+					background: #edcc61;
+				}
+
 				&[tile="512"] {
-					font-size: 25px;
+					font-size: 50px;
 					background: #edc850;
 				}
 
 				&[tile="1024"] {
-					font-size: 15px;
+					font-size: 40px;
 					background: #edc53f;
 				}
 
 				&[tile="2048"] {
-					font-size: 15px;
+					font-size: 40px;
 					background: #edc22e;
 				}
 			}

@@ -5,7 +5,7 @@
 			<div class="scores">
 				<div class="score">
 					{{score}}
-					<div v-if="scoreAddition" class="score-addition">+{{scoreAddition}}</div>
+					<div v-for="scoreAddition in scoreAdditions" class="score-addition">+{{scoreAddition}}</div>
 				</div>
 				<div class="best">{{best}}</div>
 			</div>
@@ -13,7 +13,7 @@
 			<div class="play-again" @click="playAgain">PLAY AGAIN</div>
 		</div>
 
-		<The2048Game ref="game" @addScore="addScore" @unsolvable="unsolvable"/>
+		<The2048Game ref="game" @addScore="addScore" @gameOver="gameOver"/>
 	</div>
 </template>
 
@@ -30,20 +30,20 @@
       return {
         score: 0,
         best: 0,
-        scoreAddition: 0,
+        scoreAdditions: [],
       };
     },
     methods: {
       addScore( num ) {
-        this.scoreAddition = num;
+        this.scoreAdditions.push( num );
         this.score += num;
         if ( this.score > this.best ) this.best = this.score;
         setTimeout( () => {
-          this.scoreAddition = 0;
+          this.scoreAdditions.unshift();
         }, 1000 )
       },
-      unsolvable() {
-        alert( 'There is no answer! Please play again!' );
+      gameOver() {
+        alert( 'Game Over! Please play again!' );
       },
       playAgain() {
         this.score = 0;
