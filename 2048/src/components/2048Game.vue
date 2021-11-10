@@ -158,7 +158,7 @@
       // 棋子移动
       __moveTiles( direction ) {
         if ( this.animating ) return;
-        console.log( '__moveTiles', direction )
+        // console.log( '__moveTiles', direction )
         let lastSingleTile, nextX = 0, nextY = 0;
         let canMove = false;
         switch ( direction ) {
@@ -170,9 +170,7 @@
                 const tile = this.cells[ x ][ y ];
                 if ( !tile ) continue;
                 if ( lastSingleTile && lastSingleTile.num === tile.num ) {
-                  lastSingleTile.num *= 2;
-                  this.addScore( lastSingleTile.num );
-                  this.__removeTile( tile );
+                  this.__concatTiles( tile, lastSingleTile );
                   lastSingleTile = null;
                   canMove = true;
                 } else {
@@ -194,9 +192,7 @@
                 const tile = this.cells[ x ][ y ];
                 if ( !tile ) continue;
                 if ( lastSingleTile && lastSingleTile.num === tile.num ) {
-                  lastSingleTile.num *= 2;
-                  this.addScore( lastSingleTile.num );
-                  this.__removeTile( tile );
+                  this.__concatTiles( tile, lastSingleTile );
                   lastSingleTile = null;
                   canMove = true;
                 } else {
@@ -218,9 +214,7 @@
                 const tile = this.cells[ x ][ y ];
                 if ( !tile ) continue;
                 if ( lastSingleTile && lastSingleTile.num === tile.num ) {
-                  lastSingleTile.num *= 2;
-                  this.addScore( lastSingleTile.num );
-                  this.__removeTile( tile );
+                  this.__concatTiles( tile, lastSingleTile );
                   lastSingleTile = null;
                   canMove = true;
                 } else {
@@ -242,9 +236,7 @@
                 const tile = this.cells[ x ][ y ];
                 if ( !tile ) continue;
                 if ( lastSingleTile && lastSingleTile.num === tile.num ) {
-                  lastSingleTile.num *= 2;
-                  this.addScore( lastSingleTile.num );
-                  this.__removeTile( tile );
+                  this.__concatTiles( tile, lastSingleTile );
                   lastSingleTile = null;
                   canMove = true;
                 } else {
@@ -274,15 +266,27 @@
           }, 200 );
         }
       },
+      __concatTiles( fromTile, toTile ) {
+        const { x, y } = fromTile;
+        fromTile.x = toTile.x;
+        fromTile.y = toTile.y;
+        fromTile.removed = true;
+        this.cells[ x ][ y ] = 0;
+        setTimeout( () => {
+          toTile.num *= 2;
+          this.addScore( toTile.num );
+          this.tiles.splice( this.tiles.indexOf( fromTile ), 1 );
+        }, 200 );
+      },
       __moveTile( tile, x, y ) {
-        console.log( '__moveTile', tile.x, tile.y, x, y );
+        // console.log( '__moveTile', tile.x, tile.y, x, y );
         this.cells[ tile.x ][ tile.y ] = 0;
         this.cells[ x ][ y ] = tile;
         tile.x = x;
         tile.y = y;
       },
-      __removeTile( tile ) {
-        this.cells[ tile.x ][ tile.y ] = 0;
+      __removeTile( tile, x, y ) {
+        this.cells[ x ][ y ] = 0;
         this.tiles.splice( this.tiles.indexOf( tile ), 1 );
       },
       // 计算是否结束
